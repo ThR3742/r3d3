@@ -13,139 +13,134 @@ from r3d3.config_encoder import namedtuple_to_json
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("[ExperimentDB]")
 
-default_db = "{}/experiment_v3.db".format(os.path.dirname(os.path.abspath(__file__)))
 
-DB_PATH = os.environ.get("SEARCHGANS_DB", default=default_db)
+class ExperimentDB(object):
 
-@contextmanager
-def db_cursor():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    try:
-        yield cursor
-    except Exception as e:
-        logger.error("Error: {}".format(e))
-        conn.rollback()
-    else:
-        conn.commit()
+    def __init__(self, db_path):
+        self.db_path = db_path
 
+    @contextmanager
+    def db_cursor(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            yield cursor
+        except Exception as e:
+            logger.error("Error: {}".format(e))
+            conn.rollback()
+        else:
+            conn.commit()
 
-# Initialize experiments table
-def init_experiment_table(drop=False):
-    with db_cursor() as cur:
-        if drop:
-            cur.execute("DROP TABLE IF EXISTS experiments")
+    # Initialize experiments table
+    def init_experiment_table(self, drop=False):
+        with self.db_cursor() as cur:
+            if drop:
+                cur.execute("DROP TABLE IF EXISTS experiments")
 
-        cur.execute('''CREATE TABLE IF NOT EXISTS experiments
-                     (
-                     experiment_id text,
-                     run_id text,
-                     experiment_name text,
-                     date text,
-                     config text,
-                     metrics text,
-                     owner text,
-                     PRIMARY KEY (experiment_id, run_id, owner)
-                     )''')
+            cur.execute('''CREATE TABLE IF NOT EXISTS experiments
+                         (
+                         experiment_id text,
+                         run_id text,
+                         date text,
+                         config text,
+                         metrics text,
+                         owner text,
+                         PRIMARY KEY (experiment_id, run_id, owner)
+                         )''')
 
+    def get_nb_experiments(self):
+        with self.db_cursor() as cur:
+            cur.execute("SELECT count(1) FROM experiments")
+            nb_experiments = cur.fetchone()[0]
 
-def get_nb_experiments():
-    with db_cursor() as cur:
-        cur.execute("SELECT count(1) FROM experiments")
-        nb_experiments = cur.fetchone()[0]
+        return nb_experiments
 
-    return nb_experiments
+    def add_experiment(self, experiment_id: str,
+                       run_id: str,
+                       config: typing.NamedTuple):
+        self.init_experiment_table()
 
+        with self.db_cursor() as cur:
+            date = str(datetime.datetime.now().isoformat())
 
-def add_experiment(experiment_id: str,
-                   run_id: str,
-                   experiment_name: str,
-                   config: typing.NamedTuple):
-    init_experiment_table()
+            cur.execute(f"""INSERT INTO experiments VALUES (
+                '{experiment_id}',
+                '{run_id}',
+                '{date}',
+                '{namedtuple_to_json(config)}',
+                '',
+                '{os.environ.get("USER", "unknown")}'
+            )
+            """)
 
-    with db_cursor() as cur:
-        date = str(datetime.datetime.now().isoformat())
+    def update_experiment(self, experiment_id, run_id, metrics):
+        with self.db_cursor() as cur:
+            cur.execute(f"""
+            UPDATE experiments
+            SET metrics = '{json.dumps(metrics)}'
+            WHERE run_id = '{run_id}' AND experiment_id = '{experiment_id}'""")
 
-        cur.execute(f"""INSERT INTO experiments VALUES (
-            '{experiment_id}',
-            '{run_id}',
-            '{experiment_name}',
-            '{date}',
-            '{namedtuple_to_json(config)}',
-            '',
-            '{os.environ.get("USER", "unknown")}'
-        )
-        """)
+    def list_all_experiments(self):
+        with self.db_cursor() as cur:
+            ret = list()
+            for row in cur.execute("SELECT * FROM experiments"):
+                ret.append(row)
 
+        return pd.DataFrame(
+            data=ret,
+            columns=[
+                "experiment_id",
+                "run_id",
+                "date",
+                "config",
+                "metrics",
+                "owner"])
 
-def update_experiment(experiment_id, run_id, metrics):
-    with db_cursor() as cur:
-        cur.execute(f"""
-        UPDATE experiments
-        SET metrics = '{json.dumps(metrics)}'
-        WHERE run_id = '{run_id}' AND experiment_id = '{experiment_id}'""")
+    @staticmethod
+    def parse_json(s):
+        try:
+            return json.loads(s)
+        except:
+            return dict()
 
+    @staticmethod
+    def recursive_get(d: typing.Dict, path: str):
+        path_spl = path.split(".")
+        res = d
+        for elem in path_spl:
+            res = res.get(elem, dict())
 
-def list_all_experiments():
-    with db_cursor() as cur:
-        ret = list()
-        for row in cur.execute("SELECT * FROM experiments"):
-            ret.append(row)
+        if isinstance(res, dict) and len(res) == 0:
+            return None
 
-    return pd.DataFrame(
-        data=ret,
-        columns=[
-            "experiment_id",
-            "run_id",
-            "experiment_name",
-            "date",
-            "config",
-            "metrics",
-            "owner"])
+        return res
 
+    def show_experiment(self, metarun_id: int, params: typing.Dict, metrics: typing.Dict):
+        with self.db_cursor() as cur:
+            ret = list()
+            for row in cur.execute(f"SELECT * FROM experiments WHERE metarun_id = '{metarun_id}'"):
+                ret.append(row)
 
-def parse_json(s):
-    try:
-        return json.loads(s)
-    except:
-        return dict()
+        df = pd.DataFrame(
+            data=ret,
+            columns=[
+                "experiment_id",
+                "run_id",
+                "date",
+                "config",
+                "metrics",
+                "owner"])
+        df["run_id"] = df["run_id"].apply(int)
 
+        for name in params:
+            df[name] = df["config"].apply(lambda s:
+                                          ExperimentDB.recursive_get(
+                                              ExperimentDB.parse_json(s), params[name]))
+        for name in metrics:
+            df[name] = df["metrics"].apply(lambda s:
+                                           ExperimentDB.recursive_get(
+                                               ExperimentDB.parse_json(s), metrics[name]))
 
-def recursive_get(d: typing.Dict, path: str):
-    path_spl = path.split(".")
-    res = d
-    for elem in path_spl:
-        res = res.get(elem, dict())
+        df.drop(columns=["experiment_id", "date", "metrics", "config", "owner"], inplace=True)
 
-    if isinstance(res, dict) and len(res) == 0:
-        return None
-
-    return res
-
-
-def show_experiment(metarun_id: int, params: typing.Dict, metrics: typing.Dict):
-    with db_cursor() as cur:
-        ret = list()
-        for row in cur.execute(f"SELECT * FROM experiments WHERE metarun_id = '{metarun_id}'"):
-            ret.append(row)
-
-    df = pd.DataFrame(
-        data=ret,
-        columns=[
-            "experiment_id",
-            "run_id",
-            "experiment_name",
-            "date",
-            "config",
-            "metrics",
-            "owner"])
-    df["run_id"] = df["run_id"].apply(int)
-
-    for name in params:
-        df[name] = df["config"].apply(lambda s: recursive_get(parse_json(s), params[name]))
-    for name in metrics:
-        df[name] = df["metrics"].apply(lambda s: recursive_get(parse_json(s), metrics[name]))
-
-    df.drop(columns=["experiment_id", "experiment_name", "date", "metrics", "config", "owner"], inplace=True)
-
-    return df
+        return df
