@@ -59,11 +59,11 @@ class ExperimentLauncher(object):
             args = ["{} {}".format(sys.executable, "{}/{}".format(root_dir, binary))]
             for a in parameter_set:
                 args.append("-" + a + " " + str(parameter_set[a]))
-            args.append(f"--run_id {run_id}")
-            # The experiment should be aware of the number of running processes so that it does not
-            # ask for too much memory on the GPU
+
+            # Passing launcher information to the experiment
             args.append("--max_nb_processes {}".format(min([max_nb_processes, nb_tests])))
             args.append(f"--experiment_id {experiment_id}")
+            args.append(f"--run_id {run_id}")
 
             self.db.add_experiment(
                 experiment_id=experiment_id,
