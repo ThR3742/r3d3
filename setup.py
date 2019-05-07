@@ -20,4 +20,9 @@ setuptools.setup(
     install_requires=_INSTALL_REQUIRES,
     dependency_links=[],
     data_files=[('.', ['requirements.txt'])],
+    entry_points={
+        'console_scripts': [
+            'r3d3-xp = r3d3.experiment_launcher:main_cli'
+        ],
+    },
     packages=setuptools.find_packages())
