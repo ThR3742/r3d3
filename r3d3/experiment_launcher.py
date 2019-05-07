@@ -40,7 +40,6 @@ class ExperimentLauncher(object):
 
             return launch_command_line
 
-
         # Creating env for the runs
         env = os.environ.copy()
         print("Using env {}".format(env))
@@ -80,12 +79,11 @@ def main(experiment_file: str):
     print(experiment_file)
 
     variables = dict()
-    exec(open(experiment_file).read(), variables)
+    with open(experiment_file) as f:
+        exec(f.read(), variables)
 
     my_launcher = ExperimentLauncher(variables["DB_PATH"])
-
     my_configs = cartesian_product(variables["CONFIGS"])
-
     my_launcher.run(variables["BINARY"], my_configs, variables["MAX_NB_PROCESSES"])
 
     return my_launcher
