@@ -8,8 +8,6 @@ from contextlib import contextmanager
 
 import pandas as pd
 
-from r3d3.config_encoder import namedtuple_to_json
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("[ExperimentDB]")
 
@@ -39,8 +37,8 @@ class ExperimentDB(object):
 
             cur.execute('''CREATE TABLE IF NOT EXISTS experiments
                          (
-                         experiment_id text,
-                         run_id text,
+                         experiment_id integer,
+                         run_id integer,
                          date text,
                          config text,
                          metrics text,
@@ -49,25 +47,27 @@ class ExperimentDB(object):
                          )''')
 
     def get_nb_experiments(self):
+        nb_experiments = 0
+
         with self.db_cursor() as cur:
             cur.execute("SELECT count(1) FROM experiments")
             nb_experiments = cur.fetchone()[0]
 
         return nb_experiments
 
-    def add_experiment(self, experiment_id: str,
-                       run_id: str,
-                       config: typing.NamedTuple):
-        self.init_experiment_table()
+    def add_experiment(self, experiment_id: int,
+                       run_id: int,
+                       config: typing.Dict):
+        self.init_experiment_table(drop=False)
 
         with self.db_cursor() as cur:
             date = str(datetime.datetime.now().isoformat())
 
             cur.execute(f"""INSERT INTO experiments VALUES (
-                '{experiment_id}',
-                '{run_id}',
+                {experiment_id},
+                {run_id},
                 '{date}',
-                '{namedtuple_to_json(config)}',
+                '{json.dumps(config)}',
                 '',
                 '{os.environ.get("USER", "unknown")}'
             )
