@@ -58,7 +58,7 @@ class ExperimentLauncher(object):
             # The python binary is available in sys.executable
             args = ["{} {}".format(sys.executable, f"{binary}")]
             for a in parameter_set:
-                args.append("-" + a + " " + str(parameter_set[a]))
+                args.append("--" + a + " " + str(parameter_set[a]))
 
             # Passing launcher information to the experiment
             args.append("--max_nb_processes {}".format(min([max_nb_processes, nb_tests])))
