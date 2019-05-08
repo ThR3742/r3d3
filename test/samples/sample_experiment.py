@@ -1,4 +1,5 @@
 from r3d3 import R3D3Experiment
+from r3d3.rootpath import rootpath
 import tempfile
 
 experiment = R3D3Experiment(
@@ -7,6 +8,6 @@ experiment = R3D3Experiment(
         "a": [1, 2],
         "b": [3, 4]
     },
-    binary="test/samples/sample_binary.py",
+    binary=f"{rootpath}/test/samples/sample_binary.py",
     max_nb_processes=2
 )

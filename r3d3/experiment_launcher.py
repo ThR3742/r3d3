@@ -56,7 +56,7 @@ class ExperimentLauncher(object):
 
         for run_id, parameter_set in enumerate(configs):
             # The python binary is available in sys.executable
-            args = ["{} {}".format(sys.executable, "{}/{}".format(root_dir, binary))]
+            args = ["{} {}".format(sys.executable, f"{binary}")]
             for a in parameter_set:
                 args.append("-" + a + " " + str(parameter_set[a]))
 
