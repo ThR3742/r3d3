@@ -8,7 +8,7 @@ import time
 import typing
 
 from r3d3.utils import cartesian_product
-from r3d3.experiment_db import ExperimentDB
+from r3d3 import R3D3Experiment, ExperimentDB
 
 root_dir = "{}/..".format(os.path.dirname(os.path.abspath(__file__)))
 
@@ -82,9 +82,15 @@ def main(experiment_file: str):
     with open(experiment_file) as f:
         exec(f.read(), variables)
 
-    my_launcher = ExperimentLauncher(variables["DB_PATH"])
-    my_configs = cartesian_product(variables["CONFIGS"])
-    my_launcher.run(variables["BINARY"], my_configs, variables["MAX_NB_PROCESSES"])
+    my_experiment: R3D3Experiment = variables["experiment"]
+
+    my_launcher = ExperimentLauncher(my_experiment.db_path)
+    my_configs = cartesian_product(my_experiment.configs)
+    my_launcher.run(
+        binary=my_experiment.binary,
+        configs=my_configs,
+        max_nb_processes=my_experiment.max_nb_processes
+    )
 
     return my_launcher
 
