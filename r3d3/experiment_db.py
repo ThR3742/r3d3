@@ -115,10 +115,10 @@ class ExperimentDB(object):
 
         return res
 
-    def show_experiment(self, metarun_id: int, params: typing.Dict, metrics: typing.Dict):
+    def show_experiment(self, experiment_id: int, params: typing.Dict, metrics: typing.Dict):
         with self.db_cursor() as cur:
             ret = list()
-            for row in cur.execute(f"SELECT * FROM experiments WHERE metarun_id = '{metarun_id}'"):
+            for row in cur.execute(f"SELECT * FROM experiments WHERE experiment_id = '{experiment_id}'"):
                 ret.append(row)
 
         df = pd.DataFrame(
