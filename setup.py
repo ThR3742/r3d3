@@ -16,7 +16,7 @@ _INSTALL_REQUIRES = [l for l in _REQUIREMENTS_TXT if "://" not in l]
 
 setuptools.setup(
     name='r3d3',
-    version='0.2',
+    version='0.3',
     install_requires=_INSTALL_REQUIRES,
     dependency_links=[],
     data_files=[('.', ['requirements.txt'])],
