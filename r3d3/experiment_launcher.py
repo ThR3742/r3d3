@@ -1,14 +1,13 @@
 import argparse
-import sys
 import os
-from concurrent.futures import ThreadPoolExecutor
 import subprocess
-from datetime import datetime
+import sys
 import time
 import typing
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
-from r3d3.utils import cartesian_product
-from r3d3 import R3D3Experiment, ExperimentDB
+from r3d3 import ExperimentDB, R3D3ExperimentPlan
 
 root_dir = "{}/..".format(os.path.dirname(os.path.abspath(__file__)))
 
@@ -18,7 +17,7 @@ class ExperimentLauncher(object):
         self.db = ExperimentDB(db_path)
         self.experiment_id = None
 
-    def run(self, binary: str, configs: typing.List, max_nb_processes: int):
+    def run(self, experiment_plan: R3D3ExperimentPlan, max_nb_processes: int):
         self.db.init_experiment_table()
 
         def launcher_with_environment(env, debug):
@@ -40,9 +39,10 @@ class ExperimentLauncher(object):
 
         # Creating env for the runs
         env = os.environ.copy()
-        print("Using env {}".format(env))
+        if experiment_plan.debug:
+            print("Using env {}".format(env))
 
-        nb_tests = len(configs)
+        nb_tests = len(experiment_plan.experiments)
         print("%d experiments to launch..." % nb_tests)
 
         # Creating executors with max nb processes from the config
@@ -52,11 +52,11 @@ class ExperimentLauncher(object):
         now = datetime.now()
         self.experiment_id = int(time.mktime(now.timetuple()))
 
-        for run_id, parameter_set in enumerate(configs):
+        for run_id, experiment in enumerate(experiment_plan.experiments):
             # The python binary is available in sys.executable
-            args = ["{} {}".format(sys.executable, f"{binary}")]
-            for a in parameter_set:
-                args.append("--" + a + " " + str(parameter_set[a]))
+            args = ["{} {}".format(sys.executable, f"{experiment.binary}")]
+            for a in experiment.config:
+                args.append("--" + a + " " + str(experiment.config[a]))
 
             # Passing launcher information to the experiment
             args.append(
@@ -66,28 +66,26 @@ class ExperimentLauncher(object):
             args.append(f"--run_id {run_id}")
 
             self.db.add_experiment(
-                experiment_id=self.experiment_id, run_id=run_id, config=parameter_set
+                experiment_id=self.experiment_id, run_id=run_id, config=experiment.config
             )
 
             command = " ".join(args)
             executor.submit(launcher_with_environment(env, debug=False), command)
 
 
-def main(experiment_file: str):
+def main(experiment_file: str) -> ExperimentLauncher:
     print(experiment_file)
 
     variables = dict()
     with open(experiment_file) as f:
         exec(f.read(), variables)
 
-    my_experiment: R3D3Experiment = variables["experiment"]
+    my_experiment_plan: R3D3ExperimentPlan = variables["experiment_plan"]
 
-    my_launcher = ExperimentLauncher(my_experiment.db_path)
-    my_configs = my_experiment.get_configs()
+    my_launcher = ExperimentLauncher(my_experiment_plan.db_path)
     my_launcher.run(
-        binary=my_experiment.binary,
-        configs=my_configs,
-        max_nb_processes=my_experiment.max_nb_processes,
+        experiment_plan=my_experiment_plan,
+        max_nb_processes=my_experiment_plan.max_nb_processes,
     )
 
     return my_launcher
