@@ -1,8 +1,8 @@
-from r3d3 import R3D3Experiment
+from r3d3 import R3D3ExperimentPlan
 from r3d3.rootpath import rootpath
 import tempfile
 
-experiment = R3D3Experiment(
+experiment_plan = R3D3ExperimentPlan.from_cartesian_space(
     db_path=tempfile.mkstemp()[1],
     configs={
         "a": [1, 2],
