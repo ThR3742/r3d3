@@ -7,6 +7,8 @@ import typing
 from contextlib import contextmanager
 from functools import reduce
 
+from .utils import dict_to_param_map
+
 import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +51,6 @@ class ExperimentDB(object):
             )
 
     def get_nb_experiments(self):
-        nb_experiments = 0
 
         with self.db_cursor() as cur:
             cur.execute("SELECT count(1) FROM experiments")
@@ -150,33 +151,10 @@ class ExperimentDB(object):
         return common_config, custom_config
 
     @staticmethod
-    def reformat_dict(input_dict: typing.Dict):
-        my_stack = list()
-
-        all_paths = list()
-
-        for key in input_dict:
-            my_stack.append(([key], input_dict[key]))
-
-        while len(my_stack) > 0:
-            current_path, current_config = my_stack.pop()
-            if current_config is None:
-                all_paths.append(current_path)
-            else:
-                for key in current_config:
-                    my_stack.append((current_path + [key], current_config[key]))
-
-        config = dict()
-        for path in all_paths:
-            config["_".join(path)] = ".".join(path)
-
-        return config
-
-    @staticmethod
     def build_automatic_config(df):
         config_list = [ExperimentDB.parse_json(s) for s in list(df["config"])]
         common_config, custom_config = ExperimentDB.isolate_common_config(config_list)
-        config = ExperimentDB.reformat_dict(custom_config)
+        config = dict_to_param_map(custom_config)
 
         return common_config, config
 
@@ -204,7 +182,7 @@ class ExperimentDB(object):
     def build_automatic_metric(df):
         metrics_list = [ExperimentDB.parse_json(s) for s in list(df["metrics"])]
         all_metrics_dict = ExperimentDB.list_metrics(metrics_list)
-        metrics = ExperimentDB.reformat_dict(all_metrics_dict)
+        metrics = dict_to_param_map(all_metrics_dict)
         return metrics
 
     def show_experiment(

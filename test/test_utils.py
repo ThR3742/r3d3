@@ -3,7 +3,7 @@ from functools import reduce
 import typing
 import json
 
-from r3d3.utils import cartesian_product, namedtuple_to_dict
+from r3d3.utils import cartesian_product, namedtuple_to_dict, dict_to_param_map
 
 
 class FakeSubConfig(typing.NamedTuple):
@@ -16,21 +16,28 @@ class FakeConfig(typing.NamedTuple):
 
 
 class TestUtils(unittest.TestCase):
-
     def test_cartesian_product(self):
-        my_grid = {
-            "a": ["a1", "a2", "a3"],
-            "b": ["b1", "b2"],
-            "c": ["c1", "c2"]
-        }
+        my_grid = {"a": ["a1", "a2", "a3"], "b": ["b1", "b2"], "c": ["c1", "c2"]}
 
         all_variants = cartesian_product(my_grid)
 
-        expected_nb_variants = reduce(lambda x, y: x * y, [len(v) for v in my_grid.values()])
+        expected_nb_variants = reduce(
+            lambda x, y: x * y, [len(v) for v in my_grid.values()]
+        )
         self.assertEqual(len(all_variants), expected_nb_variants)
 
     def test_namedtuple_to_json(self):
         self.assertEqual(
             json.dumps(namedtuple_to_dict(FakeConfig())),
-            "{\"alpha\": 0, \"sub_conf\": {\"foo\": \"bar\"}}"
+            '{"alpha": 0, "sub_conf": {"foo": "bar"}}',
         )
+
+    def test_dict_to_param_map(self):
+
+        my_dict = {"a": None, "b": {"c": None}}
+
+        param = dict_to_param_map(my_dict)
+
+        self.assertEqual(len(param), 2)
+        self.assertTrue("b_c" in param)
+        self.assertTrue("a" in param)

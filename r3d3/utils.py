@@ -47,3 +47,26 @@ def namedtuple_to_dict(input: typing.NamedTuple) -> typing.Dict:
                 subroot[key] = subroot[key]._asdict()
                 my_stash.append(subroot[key])
     return root
+
+
+def dict_to_param_map(input_dict: typing.Dict):
+    my_stack = list()
+
+    all_paths = list()
+
+    for key in input_dict:
+        my_stack.append(([key], input_dict[key]))
+
+    while len(my_stack) > 0:
+        current_path, current_config = my_stack.pop()
+        if current_config is None:
+            all_paths.append(current_path)
+        else:
+            for key in current_config:
+                my_stack.append((current_path + [key], current_config[key]))
+
+    config = dict()
+    for path in all_paths:
+        config["_".join(path)] = ".".join(path)
+
+    return config
