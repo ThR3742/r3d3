@@ -194,7 +194,6 @@ class ExperimentDB(object):
             if not isinstance(first_existing_value, dict):
                 ret[key] = None
             else:
-                print([metrics[key] for metrics in metrics_list if key in metrics])
                 ret[key] = ExperimentDB.list_metrics(
                     [metrics[key] for metrics in metrics_list if key in metrics]
                 )
@@ -229,7 +228,7 @@ class ExperimentDB(object):
 
         if params is None:
             common_config, params = ExperimentDB.build_automatic_config(df)
-            print(common_config)
+            print(f"Common configuration {common_config}")
         if metrics is None:
             metrics = ExperimentDB.build_automatic_metric(df)
 
