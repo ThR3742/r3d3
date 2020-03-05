@@ -17,6 +17,7 @@ class ExperimentLauncher(object):
 
     def __init__(self, db_path):
         self.db = ExperimentDB(db_path)
+        self.experiment_id = None
 
     def run(self, binary: str, configs: typing.List, max_nb_processes: int):
         self.db.init_experiment_table()
@@ -52,7 +53,7 @@ class ExperimentLauncher(object):
 
         # Running the tests
         now = datetime.now()
-        experiment_id = int(time.mktime(now.timetuple()))
+        self.experiment_id = int(time.mktime(now.timetuple()))
 
         for run_id, parameter_set in enumerate(configs):
             # The python binary is available in sys.executable
@@ -62,11 +63,11 @@ class ExperimentLauncher(object):
 
             # Passing launcher information to the experiment
             args.append("--max_nb_processes {}".format(min([max_nb_processes, nb_tests])))
-            args.append(f"--experiment_id {experiment_id}")
+            args.append(f"--experiment_id {self.experiment_id}")
             args.append(f"--run_id {run_id}")
 
             self.db.add_experiment(
-                experiment_id=experiment_id,
+                experiment_id=self.experiment_id,
                 run_id=run_id,
                 config=parameter_set
             )
