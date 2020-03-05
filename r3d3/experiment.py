@@ -1,4 +1,5 @@
 import typing
+from .utils import cartesian_product
 
 
 class R3D3Experiment(typing.NamedTuple):
@@ -6,3 +7,6 @@ class R3D3Experiment(typing.NamedTuple):
     configs: typing.Dict
     binary: str
     max_nb_processes: int
+
+    def get_configs(self) -> typing.List:
+        return cartesian_product(self.configs)

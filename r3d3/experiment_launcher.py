@@ -14,7 +14,6 @@ root_dir = "{}/..".format(os.path.dirname(os.path.abspath(__file__)))
 
 
 class ExperimentLauncher(object):
-
     def __init__(self, db_path):
         self.db = ExperimentDB(db_path)
         self.experiment_id = None
@@ -30,10 +29,8 @@ class ExperimentLauncher(object):
                     print(tab)
                     try:
                         myPopen = subprocess.Popen(
-                            tab,
-                            env=env,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+                            tab, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                        )
                         for l in myPopen.stderr:
                             print(l)
                     except subprocess.CalledProcessError as e:
@@ -62,14 +59,14 @@ class ExperimentLauncher(object):
                 args.append("--" + a + " " + str(parameter_set[a]))
 
             # Passing launcher information to the experiment
-            args.append("--max_nb_processes {}".format(min([max_nb_processes, nb_tests])))
+            args.append(
+                "--max_nb_processes {}".format(min([max_nb_processes, nb_tests]))
+            )
             args.append(f"--experiment_id {self.experiment_id}")
             args.append(f"--run_id {run_id}")
 
             self.db.add_experiment(
-                experiment_id=self.experiment_id,
-                run_id=run_id,
-                config=parameter_set
+                experiment_id=self.experiment_id, run_id=run_id, config=parameter_set
             )
 
             command = " ".join(args)
@@ -86,22 +83,19 @@ def main(experiment_file: str):
     my_experiment: R3D3Experiment = variables["experiment"]
 
     my_launcher = ExperimentLauncher(my_experiment.db_path)
-    my_configs = cartesian_product(my_experiment.configs)
+    my_configs = my_experiment.get_configs()
     my_launcher.run(
         binary=my_experiment.binary,
         configs=my_configs,
-        max_nb_processes=my_experiment.max_nb_processes
+        max_nb_processes=my_experiment.max_nb_processes,
     )
 
     return my_launcher
 
 
 def main_cli():
-    parser = argparse.ArgumentParser(description='Experiment Launcher')
-    parser.add_argument('--experiment_file', type=str)
+    parser = argparse.ArgumentParser(description="Experiment Launcher")
+    parser.add_argument("--experiment_file", type=str)
     args = parser.parse_args()
 
-    main(
-        experiment_file=args.experiment_file
-    )
-
+    main(experiment_file=args.experiment_file)

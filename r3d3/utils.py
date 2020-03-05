@@ -22,10 +22,7 @@ def cartesian_product(grid: typing.Dict):
     """
     my_keys = list(grid.keys())
 
-    configs = [
-        {my_keys[0]: val}
-        for val in grid[my_keys[0]]
-    ]
+    configs = [{my_keys[0]: val} for val in grid[my_keys[0]]]
 
     print(configs)
 
