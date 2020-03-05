@@ -7,7 +7,7 @@ import typing
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from r3d3 import R3D3Experiment, ExperimentDB, R3D3ExperimentPlan
+from r3d3 import ExperimentDB, R3D3ExperimentPlan
 
 root_dir = "{}/..".format(os.path.dirname(os.path.abspath(__file__)))
 
@@ -39,7 +39,8 @@ class ExperimentLauncher(object):
 
         # Creating env for the runs
         env = os.environ.copy()
-        print("Using env {}".format(env))
+        if experiment_plan.debug:
+            print("Using env {}".format(env))
 
         nb_tests = len(experiment_plan.experiments)
         print("%d experiments to launch..." % nb_tests)
@@ -72,7 +73,7 @@ class ExperimentLauncher(object):
             executor.submit(launcher_with_environment(env, debug=False), command)
 
 
-def main(experiment_file: str):
+def main(experiment_file: str) -> ExperimentLauncher:
     print(experiment_file)
 
     variables = dict()
