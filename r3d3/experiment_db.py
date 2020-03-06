@@ -167,6 +167,8 @@ class ExperimentDB(object):
         ret = dict()
 
         for key in all_keys:
+            if "." in key:
+                return None
             values = [metrics.get(key, None) for metrics in metrics_list]
             first_existing_value = next(item for item in values if item is not None)
             if not isinstance(first_existing_value, dict):
