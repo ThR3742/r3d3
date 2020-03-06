@@ -66,7 +66,9 @@ class ExperimentLauncher(object):
             args.append(f"--run_id {run_id}")
 
             self.db.add_experiment(
-                experiment_id=self.experiment_id, run_id=run_id, config=experiment.config
+                experiment_id=self.experiment_id,
+                run_id=run_id,
+                config=experiment.get_config_with_binary(),
             )
 
             command = " ".join(args)

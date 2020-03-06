@@ -6,6 +6,9 @@ class R3D3Experiment(typing.NamedTuple):
     config: typing.Dict
     binary: str
 
+    def get_config_with_binary(self) -> typing.Dict:
+        return {**self.config, "binary": self.binary}
+
 
 class R3D3ExperimentPlan(typing.NamedTuple):
     experiments: typing.List[R3D3Experiment]
