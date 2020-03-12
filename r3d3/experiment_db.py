@@ -50,6 +50,25 @@ class ExperimentDB(object):
                          )"""
             )
 
+    # Initialize logging table
+    def init_logging_table(self, drop=False):
+        with self.db_cursor() as cur:
+            if drop:
+                cur.execute("DROP TABLE IF EXISTS logging")
+
+            cur.execute(
+                """CREATE TABLE IF NOT EXISTS logging
+                         (
+                         experiment_id integer,
+                         run_id integer,
+                         timestamp real,
+                         owner text,
+                         level text,
+                         message text,
+                         PRIMARY KEY (experiment_id, run_id, owner, timestamp)
+                         )"""
+            )
+
     def get_nb_experiments(self):
 
         with self.db_cursor() as cur:

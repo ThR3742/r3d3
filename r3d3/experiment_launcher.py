@@ -3,7 +3,6 @@ import os
 import subprocess
 import sys
 import time
-import typing
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -32,6 +31,9 @@ class ExperimentLauncher(object):
                         )
                         for l in myPopen.stderr:
                             print(l)
+                        myPopen.stdout.close()
+                        myPopen.stderr.close()
+                        return myPopen.wait()
                     except subprocess.CalledProcessError as e:
                         print(e.output)
 
@@ -51,6 +53,8 @@ class ExperimentLauncher(object):
         # Running the tests
         now = datetime.now()
         self.experiment_id = int(time.mktime(now.timetuple()))
+
+        futures = list()
 
         for run_id, experiment in enumerate(experiment_plan.experiments):
             # The python binary is available in sys.executable
@@ -72,7 +76,13 @@ class ExperimentLauncher(object):
             )
 
             command = " ".join(args)
-            executor.submit(launcher_with_environment(env, debug=False), command)
+            future = executor.submit(launcher_with_environment(env, debug=False), command)
+            futures.append(future)
+
+        while not all([f.done() for f in futures]):
+            time.sleep(5)
+        for i, future in enumerate(futures):
+            print(f"Run id {i} finished with return code {future.result()}")
 
 
 def main(experiment_file: str) -> ExperimentLauncher:

@@ -15,3 +15,7 @@ class TestExperimentLauncher(unittest.TestCase):
     def test_multiple_plans(self):
         launcher = main(f"{test_rootpath}/samples/sample_experiment_2.py")
         self.assertEqual(launcher.db.get_nb_experiments(), 8)
+
+    def test_failure(self):
+        launcher = main(f"{test_rootpath}/samples/sample_experiment_failing.py")
+        self.assertEqual(launcher.db.get_nb_experiments(), 1)
