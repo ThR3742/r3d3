@@ -5,19 +5,21 @@ from .experiment_db import ExperimentDB
 
 
 class R3D3Logger(object):
-    def __init__(self, db_path):
+    def __init__(self, db_path, experiment_id, run_id):
         self.experiment_db = ExperimentDB(db_path=db_path)
-        self.experiment_db.init_experiment_table(drop=False)
         self.experiment_db.init_logging_table(drop=False)
 
-    def do_log(self, experiment_id, run_id, level, message):
+        self.experiment_id = experiment_id
+        self.run_id = run_id
+
+    def do_log(self, level, message):
         with self.experiment_db.db_cursor() as cur:
             ts = datetime.datetime.now().timestamp()
 
             cur.execute(
                 f"""INSERT INTO logging VALUES (
-                {experiment_id},
-                {run_id},
+                {self.experiment_id},
+                {self.run_id},
                 {ts},
                 '{os.environ.get("USER", "unknown")}',
                 '{level}',
@@ -26,26 +28,26 @@ class R3D3Logger(object):
             """
             )
 
-    def info(self, experiment_id, run_id, message):
-        self.do_log(experiment_id, run_id, "INFO", message)
+    def info(self, message):
+        self.do_log("INFO", message)
 
-    def debug(self, experiment_id, run_id, message):
-        self.do_log(experiment_id, run_id, "DEBUG", message)
+    def debug(self, message):
+        self.do_log("DEBUG", message)
 
-    def error(self, experiment_id, run_id, message):
-        self.do_log(experiment_id, run_id, "ERROR", message)
+    def error(self, message):
+        self.do_log("ERROR", message)
 
-    def warning(self, experiment_id, run_id, message):
-        self.do_log(experiment_id, run_id, "WARNING", message)
+    def warning(self, message):
+        self.do_log("WARNING", message)
 
-    def get_full_log(self, experiment_id, run_id):
+    def get_full_log(self):
         with self.experiment_db.db_cursor() as cur:
             ret = list()
             for row in cur.execute(
                 f"""
                 SELECT * FROM logging
-                WHERE run_id = '{run_id}' 
-                AND experiment_id = '{experiment_id}'
+                WHERE run_id = '{self.run_id}' 
+                AND experiment_id = '{self.experiment_id}'
                 """
             ):
                 ret.append(row)
