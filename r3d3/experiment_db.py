@@ -184,12 +184,13 @@ class ExperimentDB(object):
         all_keys = reduce(lambda x, y: x.union(y), keys[1:], keys[0])
 
         ret = dict()
+        sentinel = object()
 
         for key in all_keys:
             if "." in key:
                 return None
-            values = [metrics.get(key, None) for metrics in metrics_list]
-            first_existing_value = next(item for item in values if item is not None)
+            values = [metrics.get(key, sentinel) for metrics in metrics_list]
+            first_existing_value = next(item for item in values if item is not sentinel)
             if not isinstance(first_existing_value, dict):
                 ret[key] = None
             else:
