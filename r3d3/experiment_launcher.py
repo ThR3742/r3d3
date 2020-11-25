@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import subprocess
 import sys
 import time
@@ -12,19 +13,27 @@ root_dir = "{}/..".format(os.path.dirname(os.path.abspath(__file__)))
 
 
 class ExperimentLauncher(object):
-    def __init__(self, db_path):
-        self.db = ExperimentDB(db_path)
+    def __init__(self, db_path, forward_nb_processes=True):
+        if len(db_path) > 0:
+            self.db = ExperimentDB(db_path)
+        else:
+            self.db = None
         self.experiment_id = None
 
-    def run(self, experiment_plan: R3D3ExperimentPlan, max_nb_processes: int):
-        self.db.init_experiment_table()
+        self.forward_nb_processes = forward_nb_processes
+
+    def run(
+        self, experiment_plan: R3D3ExperimentPlan, max_nb_processes: int, debug: bool
+    ):
+        if self.db is not None:
+            self.db.init_experiment_table()
 
         def launcher_with_environment(env, debug):
             def launch_command_line(command):
                 tab = command.split()
                 print("Executing {}".format(command))
+                print(tab)
                 if not debug:
-                    print(tab)
                     try:
                         myPopen = subprocess.Popen(
                             tab, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -59,24 +68,32 @@ class ExperimentLauncher(object):
         for run_id, experiment in enumerate(experiment_plan.experiments):
             # The python binary is available in sys.executable
             args = ["{} {}".format(sys.executable, f"{experiment.binary}")]
-            for a in experiment.config:
-                args.append("--" + a + " " + str(experiment.config[a]))
+            for key in experiment.config:
+                value = str(experiment.config[key])
+                # Avoiding spaces in value
+                value = value.replace(" ", "")
+                args.append(f"--{key} {value}")
 
             # Passing launcher information to the experiment
-            args.append(
-                "--max_nb_processes {}".format(min([max_nb_processes, nb_tests]))
-            )
-            args.append(f"--experiment_id {self.experiment_id}")
-            args.append(f"--run_id {run_id}")
+            if self.forward_nb_processes:
+                args.append(
+                    "--max_nb_processes {}".format(min([max_nb_processes, nb_tests]))
+                )
 
-            self.db.add_experiment(
-                experiment_id=self.experiment_id,
-                run_id=run_id,
-                config=experiment.get_config_with_binary(),
-            )
+            if self.db is not None:
+                args.append(f"--experiment_id {self.experiment_id}")
+                args.append(f"--run_id {run_id}")
+
+                self.db.add_experiment(
+                    experiment_id=self.experiment_id,
+                    run_id=run_id,
+                    config=experiment.get_config_with_binary(),
+                )
 
             command = " ".join(args)
-            future = executor.submit(launcher_with_environment(env, debug=False), command)
+            future = executor.submit(
+                launcher_with_environment(env, debug=debug), command
+            )
             futures.append(future)
 
         while not all([f.done() for f in futures]):
@@ -85,7 +102,9 @@ class ExperimentLauncher(object):
             print(f"Run id {i} finished with return code {future.result()}")
 
 
-def main(experiment_file: str) -> ExperimentLauncher:
+def main(
+    experiment_file: str, forward_nb_processes: bool, debug: bool
+) -> ExperimentLauncher:
     print(experiment_file)
 
     variables = dict()
@@ -94,10 +113,13 @@ def main(experiment_file: str) -> ExperimentLauncher:
 
     my_experiment_plan: R3D3ExperimentPlan = variables["experiment_plan"]
 
-    my_launcher = ExperimentLauncher(my_experiment_plan.db_path)
+    my_launcher = ExperimentLauncher(
+        db_path=my_experiment_plan.db_path, forward_nb_processes=forward_nb_processes
+    )
     my_launcher.run(
         experiment_plan=my_experiment_plan,
         max_nb_processes=my_experiment_plan.max_nb_processes,
+        debug=debug,
     )
 
     return my_launcher
@@ -106,6 +128,14 @@ def main(experiment_file: str) -> ExperimentLauncher:
 def main_cli():
     parser = argparse.ArgumentParser(description="Experiment Launcher")
     parser.add_argument("--experiment_file", type=str)
+    parser.add_argument(
+        "--no_nb_proc", action="store_false", dest="forward_nb_processes"
+    )
+    parser.add_argument("--debug", action="store_true", dest="debug")
     args = parser.parse_args()
 
-    main(experiment_file=args.experiment_file)
+    main(
+        experiment_file=args.experiment_file,
+        forward_nb_processes=args.forward_nb_processes,
+        debug=args.debug,
+    )
