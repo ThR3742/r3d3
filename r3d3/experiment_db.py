@@ -219,7 +219,7 @@ class ExperimentDB(object):
         else:
             _experiment_ids = experiment_ids
 
-        query_string = ','.join([f"'{x}'" for x in _experiment_ids])
+        query_string = ",".join([f"'{x}'" for x in _experiment_ids])
 
         with self.db_cursor() as cur:
             ret = list()
@@ -260,11 +260,7 @@ class ExperimentDB(object):
 
         return df
 
-    def show_command(
-        self,
-        experiment_id: int,
-        run_id: int
-    ):
+    def show_command(self, experiment_id: int, run_id: int):
         with self.db_cursor() as cur:
             ret = list()
             for row in cur.execute(
@@ -275,7 +271,7 @@ class ExperimentDB(object):
         config = ExperimentDB.parse_json(ret[0][0])
         binary = config.pop("binary")
 
-        args = " ".join([f"--{k} {v}" for k,v in config.items()])
+        args = " ".join([f"--{k} {v}" for k, v in config.items()])
 
         command = f"python {binary} {args}"
 
