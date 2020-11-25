@@ -209,14 +209,22 @@ class ExperimentDB(object):
 
     def show_experiment(
         self,
-        experiment_id: int,
+        experiment_ids: typing.List,
         params: typing.Optional[typing.Dict] = None,
         metrics: typing.Dict = None,
     ):
+
+        if isinstance(experiment_ids, int):
+            _experiment_ids = [experiment_ids]
+        else:
+            _experiment_ids = experiment_ids
+
+        query_string = ','.join([f"'{x}'" for x in _experiment_ids])
+
         with self.db_cursor() as cur:
             ret = list()
             for row in cur.execute(
-                f"SELECT * FROM experiments WHERE experiment_id = '{experiment_id}'"
+                f"SELECT * FROM experiments WHERE experiment_id IN ({query_string})"
             ):
                 ret.append(row)
 
@@ -251,3 +259,24 @@ class ExperimentDB(object):
         )
 
         return df
+
+    def show_command(
+        self,
+        experiment_id: int,
+        run_id: int
+    ):
+        with self.db_cursor() as cur:
+            ret = list()
+            for row in cur.execute(
+                f"SELECT config FROM experiments WHERE experiment_id = '{experiment_id}' and run_id = '{run_id}'"
+            ):
+                ret.append(row)
+
+        config = ExperimentDB.parse_json(ret[0][0])
+        binary = config.pop("binary")
+
+        args = " ".join([f"--{k} {v}" for k,v in config.items()])
+
+        command = f"python {binary} {args}"
+
+        return command
